@@ -142,4 +142,55 @@ class StudentE9B(unittest.TestCase):
                     ])
 
 
+class StudentE10B(unittest.TestCase):
+    def test_buildable_candidate_with_missing_dependency_is_rejected(self):
+        import difflib
+        from lab import validate
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            p = root / 'sample'
+            fixture(p)
+            makefile = p / 'Makefile'
+            before = makefile.read_bytes()
+
+            # 候选能构建，但没有补齐 main.o 的 config.h 依赖。
+            proposed = before.decode().replace(
+                'helper.o: helper.c\n',
+                'helper.o: helper.c extra.h\n'
+            )
+            self.assertNotEqual(proposed, before.decode())
+            diff = ''.join(difflib.unified_diff(
+                before.decode().splitlines(True),
+                proposed.splitlines(True),
+                fromfile='a/Makefile', tofile='b/Makefile'
+            ))
+            candidate = root / 'candidate.patch'
+            candidate.write_text(diff)
+            evidence = root / 'validation'
+            result = validate(p, candidate, evidence)
+
+            self.assertEqual(result['checks'], {
+                'patch_applies': True,
+                'build': True,
+                'test': True,
+                'header_change': False,
+                'no_missing': False
+            })
+            self.assertIsNone(result['error'])
+            self.assertFalse(result['accepted'])
+            self.assertTrue(result['rollback'])
+            self.assertTrue(result['source_unchanged'])
+            self.assertEqual(makefile.read_bytes(), before)
+            self.assertEqual((p / 'config.h').read_text(),
+                             '#define VALUE 1\n')
+            recheck = json.loads((evidence / 'recheck.json').read_text())
+            self.assertEqual(
+                {(f['type'], f['target'], f['dependency'])
+                 for f in recheck['findings']},
+                {('MISSING', 'main.o', 'config.h'),
+                 ('REDUNDANT', 'main.o', 'unused.h'),
+                 ('REDUNDANT', 'helper.o', 'extra.h')}
+            )
+
+
 if __name__=='__main__':unittest.main()

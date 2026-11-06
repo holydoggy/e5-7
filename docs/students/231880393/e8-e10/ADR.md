@@ -1,4 +1,4 @@
-# E8—E9 B 组决策记录
+# E8—E10 B 组决策记录
 
 ## 背景与约束
 
@@ -46,3 +46,21 @@ unittest discover -s labs/e8e10 -p test_profile.py -v，共 8 项通过，退出
 核心实现无需修改，保留 E8 测试与原始 E9 证据。
 验证日志 work/unit-tests-E9-20261106-190037.log，9 项测试通过，新增一项覆盖三个风格子场景。
 E9 手工证据位于 work/e9-B-manual.6vFx4V；正式提交与 CI 记录位于 work/submission-e9-B。
+
+## E10 质量判定补充
+
+选择“可构建但仍存在 MD”的候选，补充参考流程已有的错误测试拒绝与无效补丁拒绝。
+候选只修改 helper.o 的依赖，给它增加已有的 extra.h，保持 main.o 缺少 config.h。
+先断言候选可应用、构建和普通测试成功，再独立断言 header_change、no_missing 为 False，以及候选拒绝和源字节保持。
+重检同时核对原有 MD、RD 与新增的 helper.o/extra.h 冗余依赖。
+
+该用例区分命令异常与质量检查不通过：error=None 仍可能 accepted=False。
+验证函数在独立 sandbox 中修改 config.h，源项目仅在全部检查通过时接收 Makefile。
+原始 E10 源目录保留成功接受后的 Makefile；后续坏补丁拒绝必须维持该字节副本。
+
+可替代方案是非法 C 源码导致编译失败。本次选择能构建的候选，覆盖构建成功后的质量检查。
+核心实现未改动，新增测试使用临时目录；另创建 work/e10-B-extension.VsonHU 保留独立 checks/error 和前后字节证据。
+
+本次 10 项单元测试通过，日志 work/unit-tests-E10-20261106-195314.log。
+原始 E10 三场景均通过，BuildChecker 状态 SUCCEEDED 且无 MISSING。
+输入与结果在 work/e10-B-manual.BQU12z，正式提交绑定记录在 work/submission-e10-B。

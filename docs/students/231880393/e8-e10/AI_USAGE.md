@@ -1,4 +1,4 @@
-# E8—E9 AI 使用记录
+# E8—E10 AI 使用记录
 
 工具：Codex；具体模型版本未记录。
 日期：2026-11-06（本次会话日期）；原始日志文件名采用服务器时间。
@@ -45,3 +45,18 @@ CI、PR 与归档状态另存 work/submission-e8-B/，以真实运行结果为�
 实际验证：沿用容器内 unittest discover 命令，9 项测试通过，新增测试的三个子场景均通过，退出码 0。
 日志为 work/unit-tests-E9-20261106-190037.log。原始 E9 证据保持不变。
 后续 CI、PR 与归档实际信息记录于 work/submission-e9-B。
+
+## E10 补充记录
+
+日期：2026-11-06；工具：Codex，具体模型版本未记录。
+学生已执行 E10 第 0—10 步，服务器保留三种质量判定、字节副本、构建与增量日志、动态重检、汇总和结论。
+请求完成个人扩展与提交整理。Codex 核对现有证据，新增测试、运行验证、更新报告，并执行个人提交和归档。
+
+采纳“能构建但仍有 MD”的方案：候选给 helper.o 增加 extra.h，未修复 main.o/config.h。
+新增 StudentE10B.test_buildable_candidate_with_missing_dependency_is_rejected；lab.py 未修改。
+独立断言构建成功但 header_change/no_missing 失败，候选拒绝且源字节不变；另保留新副本的详细验证证据。
+新增测试及本节报告由工具辅助写入，未记录额外的学生手工改写。
+
+实际验证：容器内 unittest discover 共 10 项通过，退出码 0，日志 work/unit-tests-E10-20261106-195314.log。
+独立副本 work/e10-B-extension.VsonHU 的 checks/error 与预期一致，STEP_EXIT_CODE=0。
+原始 E10 证据未覆盖；后续 PR、CI 和归档信息以 work/submission-e10-B 的实际记录为准。
