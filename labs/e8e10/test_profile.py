@@ -39,4 +39,38 @@ class ProfileTests(unittest.TestCase):
         (self.p/'Makefile').write_text((self.p/'Makefile').read_text().replace('-O0','-include unknown.h'))
         with self.assertRaisesRegex(ValueError,'UNSUPPORTED_FLAGS'):scan(self.p)
 
+class StudentE8B(unittest.TestCase):
+    def test_only_redundant_keeps_makefile_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p = Path(directory) / 'sample'
+            fixture(p)
+
+            # 补齐 config.h 声明，只保留 unused.h 冗余依赖。
+            makefile = p / 'Makefile'
+            makefile.write_text(
+                makefile.read_text().replace(
+                    'main.o: main.c unused.h',
+                    'main.o: main.c unused.h config.h'
+                )
+            )
+            commit(p, 'student: declare config.h')
+
+            before = makefile.read_bytes()
+            report = scan(p)
+            self.assertEqual(report['findings'], [
+                {
+                    'type': 'REDUNDANT',
+                    'target': 'main.o',
+                    'dependency': 'unused.h'
+                }
+            ])
+
+            diff, plan = patch(p, report)
+            after = makefile.read_bytes()
+
+            self.assertEqual(diff, '')
+            self.assertEqual(plan, [])
+            self.assertEqual(before, after)
+
+
 if __name__=='__main__':unittest.main()
