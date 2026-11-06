@@ -39,4 +39,158 @@ class ProfileTests(unittest.TestCase):
         (self.p/'Makefile').write_text((self.p/'Makefile').read_text().replace('-O0','-include unknown.h'))
         with self.assertRaisesRegex(ValueError,'UNSUPPORTED_FLAGS'):scan(self.p)
 
+class StudentE8B(unittest.TestCase):
+    def test_only_redundant_keeps_makefile_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p = Path(directory) / 'sample'
+            fixture(p)
+
+            # 补齐 config.h 声明，只保留 unused.h 冗余依赖。
+            makefile = p / 'Makefile'
+            makefile.write_text(
+                makefile.read_text().replace(
+                    'main.o: main.c unused.h',
+                    'main.o: main.c unused.h config.h'
+                )
+            )
+            commit(p, 'student: declare config.h')
+
+            before = makefile.read_bytes()
+            report = scan(p)
+            self.assertEqual(report['findings'], [
+                {
+                    'type': 'REDUNDANT',
+                    'target': 'main.o',
+                    'dependency': 'unused.h'
+                }
+            ])
+
+            diff, plan = patch(p, report)
+            after = makefile.read_bytes()
+
+            self.assertEqual(diff, '')
+            self.assertEqual(plan, [])
+            self.assertEqual(before, after)
+
+
+class StudentE9B(unittest.TestCase):
+    def test_duplicate_prerequisites_are_deduplicated(self):
+        from lab import run
+        for style in ('direct', 'macro', 'mixed'):
+            with self.subTest(style=style):
+                with tempfile.TemporaryDirectory() as directory:
+                    p = Path(directory) / 'sample'
+                    fixture(p, style)
+                    makefile = p / 'Makefile'
+                    text = makefile.read_text()
+                    if style == 'mixed':
+                        text = text.replace(
+                            'HEADERS = unused.h',
+                            'HEADERS = unused.h unused.h'
+                        ).replace(
+                            'main.o: main.c $(HEADERS)',
+                            'main.o: main.c $(HEADERS) main.c'
+                        )
+                    else:
+                        text = text.replace(
+                            'main.c unused.h',
+                            'main.c unused.h main.c unused.h'
+                        )
+                    makefile.write_text(text)
+                    commit(p, 'student: add duplicate prerequisites')
+                    before = makefile.read_bytes()
+                    self.assertEqual(before.count(b'unused.h'), 2)
+
+                    report = scan(p)
+                    self.assertEqual(report['declared'], {
+                        'main.o': ['main.c', 'unused.h'],
+                        'helper.o': ['helper.c']
+                    })
+                    self.assertEqual(report['findings'], [
+                        {'type': 'MISSING', 'target': 'main.o',
+                         'dependency': 'config.h'},
+                        {'type': 'REDUNDANT', 'target': 'main.o',
+                         'dependency': 'unused.h'}
+                    ])
+
+                    diff, plan = patch(p, report)
+                    self.assertEqual(plan, [
+                        {'target': 'main.o', 'dependency': 'config.h',
+                         'style': style}
+                    ])
+                    self.assertEqual(makefile.read_bytes(), before)
+                    candidate = Path(directory) / 'candidate.patch'
+                    candidate.write_text(diff)
+                    run(['git', 'apply', str(candidate.resolve())], p)
+                    after = makefile.read_bytes()
+                    self.assertEqual(after.count(b'config.h'), 1)
+                    recipes = lambda data: [
+                        line for line in data.splitlines()
+                        if line.startswith(b'\t')
+                    ]
+                    self.assertEqual(recipes(before), recipes(after))
+                    if style == 'macro':
+                        self.assertIn(b'main.o: $(DEPS)\n', after)
+                    elif style == 'mixed':
+                        self.assertIn(b'$(HEADERS)', after)
+                    repaired = scan(p)
+                    self.assertEqual(repaired['declared']['main.o'],
+                                     ['config.h', 'main.c', 'unused.h'])
+                    self.assertEqual(repaired['findings'], [
+                        {'type': 'REDUNDANT', 'target': 'main.o',
+                         'dependency': 'unused.h'}
+                    ])
+
+
+class StudentE10B(unittest.TestCase):
+    def test_buildable_candidate_with_missing_dependency_is_rejected(self):
+        import difflib
+        from lab import validate
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            p = root / 'sample'
+            fixture(p)
+            makefile = p / 'Makefile'
+            before = makefile.read_bytes()
+
+            # 候选能构建，但没有补齐 main.o 的 config.h 依赖。
+            proposed = before.decode().replace(
+                'helper.o: helper.c\n',
+                'helper.o: helper.c extra.h\n'
+            )
+            self.assertNotEqual(proposed, before.decode())
+            diff = ''.join(difflib.unified_diff(
+                before.decode().splitlines(True),
+                proposed.splitlines(True),
+                fromfile='a/Makefile', tofile='b/Makefile'
+            ))
+            candidate = root / 'candidate.patch'
+            candidate.write_text(diff)
+            evidence = root / 'validation'
+            result = validate(p, candidate, evidence)
+
+            self.assertEqual(result['checks'], {
+                'patch_applies': True,
+                'build': True,
+                'test': True,
+                'header_change': False,
+                'no_missing': False
+            })
+            self.assertIsNone(result['error'])
+            self.assertFalse(result['accepted'])
+            self.assertTrue(result['rollback'])
+            self.assertTrue(result['source_unchanged'])
+            self.assertEqual(makefile.read_bytes(), before)
+            self.assertEqual((p / 'config.h').read_text(),
+                             '#define VALUE 1\n')
+            recheck = json.loads((evidence / 'recheck.json').read_text())
+            self.assertEqual(
+                {(f['type'], f['target'], f['dependency'])
+                 for f in recheck['findings']},
+                {('MISSING', 'main.o', 'config.h'),
+                 ('REDUNDANT', 'main.o', 'unused.h'),
+                 ('REDUNDANT', 'helper.o', 'extra.h')}
+            )
+
+
 if __name__=='__main__':unittest.main()
