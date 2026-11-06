@@ -1,4 +1,4 @@
-# AI 使用记录
+# E8—E9 AI 使用记录
 
 工具：Codex；具体模型版本未记录。
 日期：2026-11-06（本次会话日期）；原始日志文件名采用服务器时间。
@@ -31,3 +31,17 @@ docker run --rm --network none --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:
 结果：8 项测试通过，OK，退出码 0；日志为 work/unit-tests-20261106-173831.log。
 E8 发现 MISSING main.o/config.h 与 REDUNDANT main.o/unused.h；候选只增加 config.h；旧报告以 STALE_REPORT 拒绝，源文件不变。
 CI、PR 与归档状态另存 work/submission-e8-B/，以真实运行结果为准。
+
+## E9 补充记录
+
+日期：2026-11-06；工具：Codex，具体模型版本未记录。
+学生已执行 E9 参考路线，服务器保留 direct、macro、mixed 的输入报告、项目、候选与计划，以及 apply-demo 和结论。
+请求继续完成 E9 个人任务与提交整理。Codex 核对原始证据，新增测试并运行验证，更新文档与提交归档。
+
+采纳方案：三种风格的 Makefile 中加入重复依赖，检查解析后的声明集合去重、缺失依赖只补一次、源字节与编译配方保持，以及应用后重扫结果。
+新增代码为 StudentE9B.test_duplicate_prerequisites_are_deduplicated；lab.py 未修改。
+新增测试和本节报告由工具辅助写入，未记录额外的学生手工改写。
+
+实际验证：沿用容器内 unittest discover 命令，9 项测试通过，新增测试的三个子场景均通过，退出码 0。
+日志为 work/unit-tests-E9-20261106-190037.log。原始 E9 证据保持不变。
+后续 CI、PR 与归档实际信息记录于 work/submission-e9-B。

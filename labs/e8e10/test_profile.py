@@ -73,4 +73,73 @@ class StudentE8B(unittest.TestCase):
             self.assertEqual(before, after)
 
 
+class StudentE9B(unittest.TestCase):
+    def test_duplicate_prerequisites_are_deduplicated(self):
+        from lab import run
+        for style in ('direct', 'macro', 'mixed'):
+            with self.subTest(style=style):
+                with tempfile.TemporaryDirectory() as directory:
+                    p = Path(directory) / 'sample'
+                    fixture(p, style)
+                    makefile = p / 'Makefile'
+                    text = makefile.read_text()
+                    if style == 'mixed':
+                        text = text.replace(
+                            'HEADERS = unused.h',
+                            'HEADERS = unused.h unused.h'
+                        ).replace(
+                            'main.o: main.c $(HEADERS)',
+                            'main.o: main.c $(HEADERS) main.c'
+                        )
+                    else:
+                        text = text.replace(
+                            'main.c unused.h',
+                            'main.c unused.h main.c unused.h'
+                        )
+                    makefile.write_text(text)
+                    commit(p, 'student: add duplicate prerequisites')
+                    before = makefile.read_bytes()
+                    self.assertEqual(before.count(b'unused.h'), 2)
+
+                    report = scan(p)
+                    self.assertEqual(report['declared'], {
+                        'main.o': ['main.c', 'unused.h'],
+                        'helper.o': ['helper.c']
+                    })
+                    self.assertEqual(report['findings'], [
+                        {'type': 'MISSING', 'target': 'main.o',
+                         'dependency': 'config.h'},
+                        {'type': 'REDUNDANT', 'target': 'main.o',
+                         'dependency': 'unused.h'}
+                    ])
+
+                    diff, plan = patch(p, report)
+                    self.assertEqual(plan, [
+                        {'target': 'main.o', 'dependency': 'config.h',
+                         'style': style}
+                    ])
+                    self.assertEqual(makefile.read_bytes(), before)
+                    candidate = Path(directory) / 'candidate.patch'
+                    candidate.write_text(diff)
+                    run(['git', 'apply', str(candidate.resolve())], p)
+                    after = makefile.read_bytes()
+                    self.assertEqual(after.count(b'config.h'), 1)
+                    recipes = lambda data: [
+                        line for line in data.splitlines()
+                        if line.startswith(b'\t')
+                    ]
+                    self.assertEqual(recipes(before), recipes(after))
+                    if style == 'macro':
+                        self.assertIn(b'main.o: $(DEPS)\n', after)
+                    elif style == 'mixed':
+                        self.assertIn(b'$(HEADERS)', after)
+                    repaired = scan(p)
+                    self.assertEqual(repaired['declared']['main.o'],
+                                     ['config.h', 'main.c', 'unused.h'])
+                    self.assertEqual(repaired['findings'], [
+                        {'type': 'REDUNDANT', 'target': 'main.o',
+                         'dependency': 'unused.h'}
+                    ])
+
+
 if __name__=='__main__':unittest.main()

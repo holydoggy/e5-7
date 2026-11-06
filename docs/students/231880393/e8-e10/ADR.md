@@ -1,4 +1,4 @@
-# E8 B 组决策记录
+# E8—E9 B 组决策记录
 
 ## 背景与约束
 
@@ -31,3 +31,18 @@ unittest discover -s labs/e8e10 -p test_profile.py -v，共 8 项通过，退出
 实际日志：work/unit-tests-20261106-173831.log。
 参考路线证据：work/e8-B-manual.PkCOga/。
 最终提交、PR 与 Actions 绑定记录：work/submission-e8-B/。
+
+## E9 重复依赖验证
+
+选择重复依赖去重测试，覆盖 direct、macro、mixed 三种声明风格。
+在临时样例的显式依赖或变量定义中重复 main.c、unused.h，提交后由 scan 生成真实报告。
+独立断言声明集合去重、MD/RD 集合准确、补丁计划只有一项，以及应用后 config.h 只出现一次。
+同时保留候选生成时源字节不变、编译配方保持、变量引用保持与修复后重扫的断言。
+
+该用例检查重复文本经过解析后的依赖集合与补丁输出，不重写源文件中的既有重复项。
+人工直接修改报告 findings 可以测试重复报告条目，但不属于本次选定的输入场景。
+共享变量跨目标影响、复杂隐式规则及完整论文声明图仍作为后续扩展。
+
+核心实现无需修改，保留 E8 测试与原始 E9 证据。
+验证日志 work/unit-tests-E9-20261106-190037.log，9 项测试通过，新增一项覆盖三个风格子场景。
+E9 手工证据位于 work/e9-B-manual.6vFx4V；正式提交与 CI 记录位于 work/submission-e9-B。
