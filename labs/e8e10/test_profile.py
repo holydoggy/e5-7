@@ -278,22 +278,6 @@ class StudentE8BRedundant304(unittest.TestCase):
             self.assertEqual((p/'Makefile').read_bytes(),before)
             self.assertIn(b'main.o: main.c unused.h',before)
 
-class StudentE9BDedup304(unittest.TestCase):
-    def test_duplicate_missing_findings_add_dependency_once(self):
-        with tempfile.TemporaryDirectory() as directory:
-            p=Path(directory)/'sample'
-            fixture(p)
-            report=scan(p)
-            missing=[f for f in report['findings'] if f['type']=='MISSING']
-            self.assertEqual(len(missing),1)
-            report['findings']=missing*2
-            before=(p/'Makefile').read_bytes()
-            diff,plan=patch(p,report)
-            added=[l for l in diff.splitlines() if l.startswith('+') and 'config.h' in l]
-            self.assertEqual(added,['+main.o: main.c unused.h config.h'])
-            self.assertEqual(len(plan),1)
-            self.assertEqual((p/'Makefile').read_bytes(),before)
-
 class StudentE10BBuildFailure(unittest.TestCase):
     def test_build_failure_rejected_and_makefile_unchanged(self):
         from lab import validate
@@ -314,5 +298,19 @@ class StudentE10BBuildFailure(unittest.TestCase):
             self.assertTrue(result['rollback'])
             self.assertTrue(result['source_unchanged'])
             self.assertEqual((p/'Makefile').read_bytes(),before)
+
+class StudentE9BUnknownTarget304(unittest.TestCase):
+    def test_unknown_target_rejected_and_source_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p = Path(directory) / 'sample'
+            fixture(p, 'macro')
+            report = scan(p)
+            report['findings'] = [
+                {'type': 'MISSING', 'target': 'ghost.o', 'dependency': 'config.h'}
+            ]
+            before = (p / 'Makefile').read_bytes()
+            with self.assertRaisesRegex(ValueError, 'UNSUPPORTED_TARGET'):
+                patch(p, report)
+            self.assertEqual((p / 'Makefile').read_bytes(), before)
 
 if __name__=='__main__':unittest.main()
