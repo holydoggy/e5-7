@@ -54,4 +54,20 @@ class StudentE8BRedundant(unittest.TestCase):
             self.assertEqual((p/'Makefile').read_bytes(),before)
             self.assertIn(b'main.o: main.c unused.h',before)
 
+class StudentE9BDedup(unittest.TestCase):
+    def test_duplicate_missing_findings_add_dependency_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p=Path(directory)/'sample'
+            fixture(p)
+            report=scan(p)
+            missing=[f for f in report['findings'] if f['type']=='MISSING']
+            self.assertEqual(len(missing),1)
+            report['findings']=missing*2
+            before=(p/'Makefile').read_bytes()
+            diff,plan=patch(p,report)
+            added=[l for l in diff.splitlines() if l.startswith('+') and 'config.h' in l]
+            self.assertEqual(added,['+main.o: main.c unused.h config.h'])
+            self.assertEqual(len(plan),1)
+            self.assertEqual((p/'Makefile').read_bytes(),before)
+
 if __name__=='__main__':unittest.main()
