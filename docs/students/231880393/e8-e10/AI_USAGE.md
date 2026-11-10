@@ -1,62 +1,29 @@
-# E8—E10 AI 使用记录
+# AI使用记录
 
-工具：Codex；具体模型版本未记录。
-日期：2026-11-06（本次会话日期）；原始日志文件名采用服务器时间。
+工具/模型/日期：Codex；具体模型版本未记录；实验协助日期为 2026-11-06，报告整理日期为 2026-11-10。
 
-## 输入上下文与问题
+输入上下文与问题：我提供了 E8—E10 B 组手册、个人测试示例、报告模板和实际终端输出，请 AI 帮忙分析测试思路、整理报告。因为我自己没能完成上传，三个阶段的报告提交也请 AI 协助处理。
 
-课程 E8 B 手册、个人测试示例、提交要求，以及学生执行参考流程后的终端输出。
-请求核对报告、候选补丁、旧报告拒绝结果，仿写仅含 REDUNDANT 的测试，并整理实验文档与提交。
+模型建议：E8 增加只有 REDUNDANT 的测试，检查是否会产生不必要的删除；E9 在 direct、macro、mixed 三种写法中重复声明依赖，检查是否重复补齐；E10 构造能编译但仍漏修 MD 的候选，检查它是否会被拒绝。报告按模板整理实际结果，提交时保存对应的 PR、CI 和归档记录。
 
-## 建议与采纳
+采纳/拒绝及理由：采用了这三个测试方案，因为它们能补充手册中正常流程以外的检查。AI 协助编写并运行测试，根据日志起草报告和 ADR，并协助各阶段上传提交。没有另外记录明确拒绝的测试方案；报告中重复的解释按我的要求删去，让内容集中在模板要求上。
 
-采纳先在临时项目中补齐 config.h 声明并提交，再扫描得到仅含 REDUNDANT 的真实报告。
-新增 StudentE8B.test_only_redundant_keeps_makefile_bytes，独立断言发现列表、空补丁、空计划和源字节不变。
-新增测试、个人报告和 ADR 由 Codex 辅助起草并在服务器写入；参考流程输出由学生提供。
+人工修改：手册中的分步实验由我执行，终端输出和个人信息由我提供。我提出了按模板填写、精简内容和调整表达的要求，具体文档编辑由 AI 完成。新增测试未记录后续的个人手工改写。
 
-## 人工操作与贡献边界
-
-学生执行并提供 E8 第 0—8 步输出，选择仅 REDUNDANT 的自主测试方向。
-新增测试未记录额外的学生手工改写。文档需学生复核；姓名、校区和小组编号由学生提供。
-检测与补丁实现来自课程实验包，本次未修改 lab.py。
-
-## 实际验证
-
-在 course-e8e10:231880393 容器中执行：
+实际验证命令/输入/结果：在课程容器中执行以下命令：
 
 ```bash
 docker run --rm --network none --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/course" -w /course course-e8e10:231880393 python3 -m unittest discover -s labs/e8e10 -p test_profile.py -v
 ```
 
-结果：8 项测试通过，OK，退出码 0；日志为 work/unit-tests-20261106-173831.log。
-E8 发现 MISSING main.o/config.h 与 REDUNDANT main.o/unused.h；候选只增加 config.h；旧报告以 STALE_REPORT 拒绝，源文件不变。
-CI、PR 与归档状态另存 work/submission-e8-B/，以真实运行结果为准。
+E8 输入为仅含 RD unused.h 的报告，结果 diff、plan 为空，Makefile 字节不变，共 8 项测试通过。日志：work/unit-tests-20261106-173831.log。
 
-## E9 补充记录
+E9 在三种声明风格中重复写 main.c 和 unused.h，结果解析后的依赖集合去重，config.h 只补一次，配方和变量引用保留，共 9 项测试通过。日志：work/unit-tests-E9-20261106-190037.log。
 
-日期：2026-11-06；工具：Codex，具体模型版本未记录。
-学生已执行 E9 参考路线，服务器保留 direct、macro、mixed 的输入报告、项目、候选与计划，以及 apply-demo 和结论。
-请求继续完成 E9 个人任务与提交整理。Codex 核对原始证据，新增测试并运行验证，更新文档与提交归档。
+E10 候选只给 helper.o 增加 extra.h，仍漏修 main.o/config.h。构建和普通测试通过，但 header_change、no_missing 为 False，候选被拒绝，源字节不变，共 10 项测试通过。日志：work/unit-tests-E10-20261106-195314.log。
 
-采纳方案：三种风格的 Makefile 中加入重复依赖，检查解析后的声明集合去重、缺失依赖只补一次、源字节与编译配方保持，以及应用后重扫结果。
-新增代码为 StudentE9B.test_duplicate_prerequisites_are_deduplicated；lab.py 未修改。
-新增测试和本节报告由工具辅助写入，未记录额外的学生手工改写。
+以上退出码均为 0，E10 扩展证据保存在 work/e10-B-extension.VsonHU。提交验证记录见各阶段的 work/submission-e8-B/、work/submission-e9-B/、work/submission-e10-B/。这些结果来自此前运行，本次只修改文档，未重新运行测试；文字修订的提交与验证另行记录。
 
-实际验证：沿用容器内 unittest discover 命令，9 项测试通过，新增测试的三个子场景均通过，退出码 0。
-日志为 work/unit-tests-E9-20261106-190037.log。原始 E9 证据保持不变。
-后续 CI、PR 与归档实际信息记录于 work/submission-e9-B。
+未调用模型时写明未调用；记录参考实现和自己的贡献边界。
 
-## E10 补充记录
-
-日期：2026-11-06；工具：Codex，具体模型版本未记录。
-学生已执行 E10 第 0—10 步，服务器保留三种质量判定、字节副本、构建与增量日志、动态重检、汇总和结论。
-请求完成个人扩展与提交整理。Codex 核对现有证据，新增测试、运行验证、更新报告，并执行个人提交和归档。
-
-采纳“能构建但仍有 MD”的方案：候选给 helper.o 增加 extra.h，未修复 main.o/config.h。
-新增 StudentE10B.test_buildable_candidate_with_missing_dependency_is_rejected；lab.py 未修改。
-独立断言构建成功但 header_change/no_missing 失败，候选拒绝且源字节不变；另保留新副本的详细验证证据。
-新增测试及本节报告由工具辅助写入，未记录额外的学生手工改写。
-
-实际验证：容器内 unittest discover 共 10 项通过，退出码 0，日志 work/unit-tests-E10-20261106-195314.log。
-独立副本 work/e10-B-extension.VsonHU 的 checks/error 与预期一致，STEP_EXIT_CODE=0。
-原始 E10 证据未覆盖；后续 PR、CI 和归档信息以 work/submission-e10-B 的实际记录为准。
+本次已调用 AI。lab.py 的检测与修复算法沿用课程参考实现，没有修改。本次新增内容是 test_profile.py 中的三个测试及实验文档，由 AI 协助编写和验证；本人完成手册分步操作、提供实验输出并提出修改要求。参考实现不计作个人新增代码。
