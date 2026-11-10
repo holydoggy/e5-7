@@ -193,4 +193,124 @@ class StudentE10B(unittest.TestCase):
             )
 
 
+class StudentE8BRedundant(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.p=Path(self.tmp.name)/'sample';fixture(self.p)
+
+    def test_redundant(self):
+        r=scan(self.p)
+        r['findings']=[f for f in r['findings'] if f['type']=='REDUNDANT']
+        self.assertEqual([(f['type'],f['dependency']) for f in r['findings']],[('REDUNDANT','unused.h')])
+        before=(self.p/'Makefile').read_bytes()
+        diff,plan=patch(self.p,r)
+        self.assertEqual(diff,'')
+        self.assertEqual(plan,[])
+        self.assertEqual((self.p/'Makefile').read_bytes(),before)
+        self.assertIn('unused.h',(self.p/'Makefile').read_text())
+
+class StudentE9BDedup(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.p=Path(self.tmp.name)/'sample';fixture(self.p)
+
+    def test_duplicate_declaration_deduped(self):
+        from lab import declarations, run
+        m=self.p/'Makefile'
+        m.write_text(m.read_text().replace(
+            'main.o: main.c unused.h',
+            'main.o: main.c unused.h main.c unused.h'))
+        commit(self.p,'student: duplicate declaration')
+        declared,_=declarations(self.p)
+        self.assertEqual(declared['main.o'],['main.c','unused.h'])
+        r=scan(self.p)
+        self.assertEqual([(f['type'],f['dependency']) for f in r['findings']],
+                         [('MISSING','config.h'),('REDUNDANT','unused.h')])
+        diff,plan=patch(self.p,r)
+        self.assertEqual(diff.count('+main.o: '),1)
+        self.assertEqual(diff.count('config.h'),1)
+        candidate=Path(self.tmp.name)/'dup.patch';candidate.write_text(diff)
+        run(['git','apply',str(candidate.resolve())],self.p)
+        self.assertEqual(
+            [(f['type'],f['dependency']) for f in scan(self.p)['findings']],
+            [('REDUNDANT','unused.h')])
+
+class StudentE10BPartialPatch(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name); self.p=self.root/'sample';fixture(self.p)
+
+    def test_md_candidate(self):
+        import difflib
+        from lab import validate
+        m=self.p/'Makefile'
+        original=m.read_text()
+        patched=original.replace('helper.o: helper.c','helper.o: helper.c unused.h')
+        diff=''.join(difflib.unified_diff(original.splitlines(True),patched.splitlines(True),
+                                          fromfile='a/Makefile',tofile='b/Makefile'))
+        candidate=self.root/'partial.patch';candidate.write_text(diff)
+        before=m.read_bytes()
+        r=validate(self.p,candidate,self.root/'validation')
+        self.assertTrue(r['checks']['patch_applies'])
+        self.assertTrue(r['checks']['build'])
+        self.assertTrue(r['checks']['test'])
+        self.assertFalse(r['checks']['header_change'])
+        self.assertFalse(r['checks']['no_missing'])
+        self.assertFalse(r['accepted'])
+        self.assertTrue(r['rollback'])
+        self.assertTrue(r['source_unchanged'])
+        self.assertIsNone(r['error'])
+        self.assertEqual(m.read_bytes(),before)
+        self.assertTrue((self.root/'validation'/'validation.json').is_file())
+
+class StudentE8BRedundant304(unittest.TestCase):
+    def test_redundant_only_report_generates_no_patch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p=Path(directory)/'sample'
+            fixture(p)
+            report=scan(p)
+            report['findings']=[f for f in report['findings'] if f['type']=='REDUNDANT']
+            self.assertEqual(len(report['findings']),1)
+            before=(p/'Makefile').read_bytes()
+            diff,plan=patch(p,report)
+            self.assertEqual(diff,'')
+            self.assertEqual(plan,[])
+            self.assertEqual((p/'Makefile').read_bytes(),before)
+            self.assertIn(b'main.o: main.c unused.h',before)
+
+class StudentE10BBuildFailure(unittest.TestCase):
+    def test_build_failure_rejected_and_makefile_unchanged(self):
+        from lab import validate
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            p=root/'sample'
+            fixture(p)
+            diff,plan=patch(p,scan(p))
+            candidate=root/'candidate.patch'
+            candidate.write_text(diff)
+            before=(p/'Makefile').read_bytes()
+            (p/'main.c').write_text('this is invalid C;\n')
+            result=validate(p,candidate,root/'validation')
+            self.assertTrue(result['checks']['patch_applies'])
+            self.assertFalse(result['checks'].get('build',False))
+            self.assertIn('COMMAND_FAILED',result['error'])
+            self.assertFalse(result['accepted'])
+            self.assertTrue(result['rollback'])
+            self.assertTrue(result['source_unchanged'])
+            self.assertEqual((p/'Makefile').read_bytes(),before)
+
+class StudentE9BUnknownTarget304(unittest.TestCase):
+    def test_unknown_target_rejected_and_source_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p = Path(directory) / 'sample'
+            fixture(p, 'macro')
+            report = scan(p)
+            report['findings'] = [
+                {'type': 'MISSING', 'target': 'ghost.o', 'dependency': 'config.h'}
+            ]
+            before = (p / 'Makefile').read_bytes()
+            with self.assertRaisesRegex(ValueError, 'UNSUPPORTED_TARGET'):
+                patch(p, report)
+            self.assertEqual((p / 'Makefile').read_bytes(), before)
+
 if __name__=='__main__':unittest.main()
