@@ -132,7 +132,8 @@ def execute(request, out, job_id=None):
         if mode in ('e11-b','e12'):
             reference=result['stages'][-1]['artifact']
             md_envelope=load_artifact(out/(md_envelope['kind']+'.json'),reference['sha256'])
-            check_envelope(md_envelope,target_sha)
+            expected_kind='fixed-md' if mode=='e11-b' else 'incremental-check'
+            check_envelope(md_envelope,target_sha,expected_kind)
             current=md_envelope['data']
             before=(target/'Makefile').read_bytes()
             diff,edits=patch(target,current)
