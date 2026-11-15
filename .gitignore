@@ -9,3 +9,6 @@
 work/
 __pycache__/
 .pytest_cache/
+
+# Local integration data
+data/
