@@ -1,0 +1,8 @@
+实验,数据来源,仓库,base_commit,target_commit,job_id,trace_id,报告路径,补丁路径,结果
+E11-A,不适用：本人为 B 轨道,,,,,,,,不纳入本次个人阶段交付
+E11-B,course-generated；共享样例上新增 macro 提交,/course/data/e11-b-macro-231880393/repo,583ab08787a030a5806ed0953ae1bde20af3306d,6787085936895326cec9240273de3430844fdf19,job-7d5b1f01cd8445a699fe873841d4498a,trace-f6b3c9bc7e5e4058936b1819bbe62edb,work/e11-b-231880393-20261115/macro/result.json,work/e11-b-231880393-20261115/macro/candidate.patch,SUCCEEDED；accepted=true；复验无 MD
+E11-B共享direct,course-generated；执行者231880304；引用共享证据,/course/data/integration-sample/repo,583ab08787a030a5806ed0953ae1bde20af3306d,c3dec189e350351cc34f85a1736b4616c90f1384,job-fc429735ade14a12a940e6366254ccd1,trace-aa9d58f12c3740caa25991b9479f122f,work/shared-baseline/231880304/e11-b-01/result.json,work/shared-baseline/231880304/e11-b-01/candidate.patch,共享结果 SUCCEEDED；非本人独立运行
+E11-B外层旧报告,course-generated；仅将对应报告 commit 改为40个0,/course/data/e11-b-macro-231880393/repo,583ab08787a030a5806ed0953ae1bde20af3306d,6787085936895326cec9240273de3430844fdf19,job-a2a4eaa9580d490b9e811c1f170aae5a,trace-8d4a4147abcb480bbb3276bfe8e65d22,work/e11-b-231880393-20261115/stale-envelope/result.json,,预期拒绝 STALE_REPORT；无补丁；源字节不变
+E11-B内部旧报告,course-generated；仅将对应报告 commit 改为40个0,/course/data/e11-b-macro-231880393/repo,583ab08787a030a5806ed0953ae1bde20af3306d,6787085936895326cec9240273de3430844fdf19,job-6b949dd622634d74bc2fd0b63186dd24,trace-e60029054b114c87a7284b8b28b152d3,work/e11-b-231880393-20261115/stale-data/result.json,,预期拒绝 STALE_REPORT；无补丁；源字节不变
+E12固定样例,待完成个人 API 联调；CI 教学例程不替代个人联调,,,,,,,,本阶段未完成
+E12真实项目,待选择本组实际维护的真实项目,,,,,,,,本阶段未接入
