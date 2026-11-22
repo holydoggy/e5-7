@@ -122,6 +122,13 @@ def execute(request, out, job_id=None):
         else:
             # E11-B still consumes a fixed MD input, separately from A's live output.
             fixed=Path(request['fixed_report'])
+            if not fixed.is_file():
+                raise Failure('INVALID_REQUEST','Fixed report missing')
+            expected_sha=request.get('fixed_report_sha256')
+            if expected_sha:
+                actual_sha=hashlib.sha256(fixed.read_bytes()).hexdigest()
+                if actual_sha!=expected_sha:
+                    raise Failure('ARTIFACT_HASH_MISMATCH','Fixed report content changed during transfer')
             envelope=json.loads(fixed.read_text(encoding='utf-8'))
             check_envelope(envelope,target_sha,'fixed-md')
             current=envelope['data']
