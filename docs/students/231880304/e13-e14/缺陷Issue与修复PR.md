@@ -8,6 +8,8 @@ C2 `STALE_REPORT`、C3 `ARTIFACT_HASH_MISMATCH`、C4 `TIMED_OUT`、C5 `REPAIR_RE
 
 C5 第一次构造（`work/e13-c5-01/`）引用了不存在的 `bogus.h`，被 `patch()` 以 `MISSING_INPUT` 拒绝；这是测试构造错误，已改用“漏掉 config.h 的错误补丁”（`work/e13-c5b-01/`）完成 C5，不记为缺陷。
 
+CI 环境问题：`four-services` 前两次失败，原因是容器 root 读取 Actions runner 拥有的仓库，git 报 `detected dubious ownership`。在四个 Compose 服务中加入 `GIT_CONFIG_COUNT/KEY/VALUE` 的 `safe.directory` 配置后，run `44991221259` 通过；属于 CI 适配修复，不记为产品缺陷。
+
 ## 待 A 侧补充
 
 - A01 对 B01 项目的反向 C1–C8；若发现阻断缺陷，按模板补 Issue 编号、失败阶段、日志路径、修复 PR 与回归证据。
