@@ -10,6 +10,8 @@ C5 第一次构造（`work/e13-c5-01/`）引用了不存在的 `bogus.h`，被 `
 
 CI 环境问题：`four-services` 前两次失败，原因是容器 root 读取 Actions runner 拥有的仓库，git 报 `detected dubious ownership`。在四个 Compose 服务中加入 `GIT_CONFIG_COUNT/KEY/VALUE` 的 `safe.directory` 配置后，run `44991221259` 通过；属于 CI 适配修复，不记为产品缺陷。
 
+A01 对 B01 项目的反向 C1–C8 均通过（C5 的错误补丁为预期拒绝，不是产品缺陷）；B01 消费 A01 fixed-md 的 e11-b 也通过。A01 回传包中 `SHA256SUMS` 引用的 `A01-B01-E13-pair-evidence-20261123.tar.gz` 缺失（证据目录存在），属于打包遗漏，请 A01 补发 tar 或在记录中确认以目录为准；不记为产品缺陷。
+
 ## 待 A 侧补充
 
 - A01 对 B01 项目的反向 C1–C8；若发现阻断缺陷，按模板补 Issue 编号、失败阶段、日志路径、修复 PR 与回归证据。
